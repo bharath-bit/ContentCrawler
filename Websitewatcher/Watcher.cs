@@ -5,9 +5,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Extensions.Sql;
 using Microsoft.Extensions.Logging;
 using PuppeteerSharp;
-
 namespace Websitewatcher;
-
 public class Watcher(ILogger<Watcher> logger)
 {
     private const string querystring = @"SELECT w.id, w.url, w.xpath, s.content AS latestcontent
@@ -30,7 +28,6 @@ LEFT JOIN dbo.snapshot s
             var content = divwithcontent != null ? divwithcontent.InnerText.Trim() : "No Content";
             // this is for testing 
             content = content.Replace("Microsoft Entra", "Azure AD");
-            //logger.LogInformation(content);
             var contenthaschanged = content != website.LatestContent;
             if (contenthaschanged)
             {
