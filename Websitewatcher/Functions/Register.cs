@@ -4,10 +4,11 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Extensions.Sql;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Websitewatcher.Services;
 
-namespace Websitewatcher;
+namespace Websitewatcher.Functions;
 
-public class Register(ILogger<Register> logger)
+public class Register(ILogger<Register> logger/*, SafeBrowsingService safeBrowsingService*/)
 {
     private readonly ILogger<Register> _logger = logger;
 
@@ -15,12 +16,19 @@ public class Register(ILogger<Register> logger)
     [SqlOutput("dbo.website", "websitewatcher")]
     public async Task<website> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req)
     {
-       
-        var requestBody=await new StreamReader(req.Body).ReadToEndAsync();
+
+        var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
         var options = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
         var newWebsite = JsonSerializer.Deserialize<website>(requestBody, options);
         newWebsite.ID = Guid.NewGuid();
-        return  newWebsite;
+        //var result = safeBrowsingService.Check(newWebsite.Url);
+        //if (result.HasThreat)
+        //{
+        //    var threats = string.Join("", result.Threats);
+        //    logger.LogError($"Url has the following threats: {threats}");
+        //    return null;
+        //}
+        return newWebsite;
     }
     public class website
     {

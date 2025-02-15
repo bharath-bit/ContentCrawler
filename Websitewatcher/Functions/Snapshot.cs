@@ -2,9 +2,9 @@ using HtmlAgilityPack;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Extensions.Sql;
 using Microsoft.Extensions.Logging;
-using static Websitewatcher.Register;
+using static Websitewatcher.Functions.Register;
 
-namespace Websitewatcher;
+namespace Websitewatcher.Functions;
 
 public class Snapshot(ILogger<Snapshot> logger)
 {
@@ -19,7 +19,7 @@ public class Snapshot(ILogger<Snapshot> logger)
         {
             logger.LogInformation($"{change.Operation}");
             logger.LogInformation($"ID: {change.Item.ID} URL: {change.Item.Url}");
-            if(change.Operation!=SqlChangeOperation.Insert)
+            if (change.Operation != SqlChangeOperation.Insert)
             {
                 continue;
             }
@@ -29,7 +29,7 @@ public class Snapshot(ILogger<Snapshot> logger)
             var content = divwithcontent != null ? divwithcontent.InnerText.Trim() : "No Content";
             logger.LogInformation(content);
             result = new snapshotrecord(change.Item.ID, content);
-            
+
             //HttpClient client = new HttpClient();
         }
         return result;
@@ -37,5 +37,5 @@ public class Snapshot(ILogger<Snapshot> logger)
     }
 
 }
-public record snapshotrecord (Guid ID,string Content);
+public record snapshotrecord(Guid ID, string Content);
 

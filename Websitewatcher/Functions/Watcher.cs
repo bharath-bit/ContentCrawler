@@ -5,8 +5,9 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Extensions.Sql;
 using Microsoft.Extensions.Logging;
 using PuppeteerSharp;
-namespace Websitewatcher;
-public class Watcher(ILogger<Watcher> logger)
+using Websitewatcher.Services;
+namespace Websitewatcher.Functions;
+public class Watcher(ILogger<Watcher> logger, PdfCreaterService pdfCreaterService)
 {
     private const string querystring = @"SELECT w.id, w.url, w.xpath, s.content AS latestcontent
 FROM dbo.website w
@@ -15,12 +16,12 @@ LEFT JOIN dbo.snapshot s
     AND s.timestamp = (SELECT MAX(timestamp) FROM dbo.snapshot WHERE id = w.id)";
 
     [Function(nameof(Watcher))]
-    [SqlOutput("dbo.snapshot","websitewatcher")]
-    public async Task<snapshotrecord?> Run([TimerTrigger("*/20 * * * * *")] TimerInfo myTimer,[SqlInput(querystring,"websitewatcher")] IReadOnlyList<websitemodel> websites)
-       
+    [SqlOutput("dbo.snapshot", "websitewatcher")]
+    public async Task<snapshotrecord?> Run([TimerTrigger("*/20 * * * * *")] TimerInfo myTimer, [SqlInput(querystring, "websitewatcher")] IReadOnlyList<websitemodel> websites)
+
     {
         snapshotrecord result = null;
-        foreach(var website in websites)
+        foreach (var website in websites)
         {
             HtmlWeb web = new HtmlWeb();
             HtmlDocument doc = web.Load(website.Url);//this loads the page and saves in doc 
@@ -33,7 +34,7 @@ LEFT JOIN dbo.snapshot s
             {
                 logger.LogInformation("Content changed !");
 
-                var newpdf = await ConvertpagetoPdfasync(website.Url);
+                var newpdf = await pdfCreaterService.ConvertpagetoPdfasync(website.Url);
                 var connectionstring = Environment.GetEnvironmentVariable("ConnectionStrings:websitewatcherstorage");
                 var blobclient = new BlobClient(connectionstring, "pdfs", $"{website.ID} -{DateTime.UtcNow:MMddyyyyhhmmss}.pdf");
                 var blob = await blobclient.UploadAsync(newpdf);
@@ -43,20 +44,9 @@ LEFT JOIN dbo.snapshot s
 
         }
         return result;
-        
+
     }
-    private async Task<Stream> ConvertpagetoPdfasync(string url)
-    {
-        var browserfetcher = new BrowserFetcher();
-        await browserfetcher.DownloadAsync();
-        await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions { Headless = true });
-        await using var page = await browser.NewPageAsync();
-        await page.GoToAsync(url);
-        await page.EvaluateExpressionAsync("document.fonts.ready");
-        var result = await page.PdfStreamAsync();
-        result.Position = 0;
-        return result;
-    }
+
 }
 public class websitemodel
 {
